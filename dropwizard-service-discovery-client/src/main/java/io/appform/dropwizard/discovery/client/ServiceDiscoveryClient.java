@@ -23,7 +23,9 @@ import com.flipkart.ranger.ServiceFinderBuilders;
 import com.flipkart.ranger.finder.sharded.SimpleShardedServiceFinder;
 import com.flipkart.ranger.model.ServiceNode;
 import io.appform.dropwizard.discovery.client.selector.HierarchicalEnvironmentAwareShardSelector;
+import io.appform.dropwizard.discovery.client.selector.RandomWeightedNodeSelector;
 import io.appform.dropwizard.discovery.common.ShardInfo;
+import io.durg.tsaheylu.model.NodeData;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
@@ -38,8 +40,8 @@ import java.util.Optional;
  */
 @Slf4j
 public class ServiceDiscoveryClient {
-    private final ShardInfo criteria;
-    private SimpleShardedServiceFinder<ShardInfo> serviceFinder;
+    private final NodeData criteria;
+    private SimpleShardedServiceFinder<NodeData> serviceFinder;
 
     @Builder(builderMethodName = "fromConnectionString", builderClassName = "FromConnectionStringBuilder")
     private ServiceDiscoveryClient(
@@ -77,10 +79,10 @@ public class ServiceDiscoveryClient {
                     Constants.MINIMUM_REFRESH_TIME);
         }
 
-        this.criteria = ShardInfo.builder()
+        this.criteria = NodeData.builder()
                 .environment(environment)
                 .build();
-        this.serviceFinder = ServiceFinderBuilders.<ShardInfo>shardedFinderBuilder()
+        this.serviceFinder = ServiceFinderBuilders.<NodeData>shardedFinderBuilder()
                 .withCuratorFramework(curator)
                 .withNamespace(namespace)
                 .withServiceName(serviceName)
@@ -98,6 +100,7 @@ public class ServiceDiscoveryClient {
                 .withNodeRefreshIntervalMs(effectiveRefreshTimeMs)
                 .withDisableWatchers(disableWatchers)
                 .withShardSelector(new HierarchicalEnvironmentAwareShardSelector())
+                .withNodeSelector(new RandomWeightedNodeSelector())
                 .build();
     }
 
@@ -109,19 +112,19 @@ public class ServiceDiscoveryClient {
         serviceFinder.stop();
     }
 
-    public Optional<ServiceNode<ShardInfo>> getNode() {
+    public Optional<ServiceNode<NodeData>> getNode() {
         return getNode(criteria);
     }
 
-    public List<ServiceNode<ShardInfo>> getAllNodes() {
+    public List<ServiceNode<NodeData>> getAllNodes() {
         return getAllNodes(criteria);
     }
 
-    public Optional<ServiceNode<ShardInfo>> getNode(final ShardInfo shardInfo) {
+    public Optional<ServiceNode<NodeData>> getNode(final NodeData shardInfo) {
             return Optional.ofNullable(serviceFinder.get(shardInfo));
     }
 
-    public List<ServiceNode<ShardInfo>> getAllNodes(final ShardInfo shardInfo) {
+    public List<ServiceNode<NodeData>> getAllNodes(final NodeData shardInfo) {
         return serviceFinder.getAll(shardInfo);
     }
 

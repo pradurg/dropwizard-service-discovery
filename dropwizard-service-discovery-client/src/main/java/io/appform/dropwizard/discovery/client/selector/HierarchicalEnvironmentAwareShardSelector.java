@@ -6,6 +6,7 @@ import com.flipkart.ranger.model.ShardSelector;
 import com.google.common.collect.ListMultimap;
 import io.appform.dropwizard.discovery.client.Constants;
 import io.appform.dropwizard.discovery.common.ShardInfo;
+import io.durg.tsaheylu.model.NodeData;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
@@ -16,11 +17,11 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
-public class HierarchicalEnvironmentAwareShardSelector implements ShardSelector<ShardInfo, MapBasedServiceRegistry<ShardInfo>> {
+public class HierarchicalEnvironmentAwareShardSelector implements ShardSelector<NodeData, MapBasedServiceRegistry<NodeData>> {
 
     @Override
-    public List<ServiceNode<ShardInfo>> nodes(final ShardInfo criteria,
-                                              final MapBasedServiceRegistry<ShardInfo> serviceRegistry) {
+    public List<ServiceNode<NodeData>> nodes(final NodeData criteria,
+                                              final MapBasedServiceRegistry<NodeData> serviceRegistry) {
         val serviceNodes = serviceRegistry.nodes();
         val serviceName = serviceRegistry.getService().getServiceName();
         val environment = criteria.getEnvironment();
@@ -28,7 +29,7 @@ public class HierarchicalEnvironmentAwareShardSelector implements ShardSelector<
         if (Objects.equals(environment, Constants.ALL_ENV)) {
             return allNodes(serviceNodes);
         }
-        for (ShardInfo shardInfo : criteria) {
+        for (NodeData shardInfo : criteria) {
             val currentEnvNodes = serviceNodes.get(shardInfo);
             if (!currentEnvNodes.isEmpty()) {
                 log.debug("Effective environment for discovery of {} is {}", serviceName, environment);
@@ -38,7 +39,7 @@ public class HierarchicalEnvironmentAwareShardSelector implements ShardSelector<
         return Collections.emptyList();
     }
 
-    private List<ServiceNode<ShardInfo>> allNodes(ListMultimap<ShardInfo, ServiceNode<ShardInfo>> serviceNodes) {
+    private List<ServiceNode<NodeData>> allNodes(ListMultimap<NodeData, ServiceNode<NodeData>> serviceNodes) {
         return serviceNodes.asMap()
                 .values()
                 .stream()

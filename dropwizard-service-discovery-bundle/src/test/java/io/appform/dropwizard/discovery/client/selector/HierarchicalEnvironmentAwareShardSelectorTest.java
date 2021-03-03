@@ -6,6 +6,7 @@ import com.flipkart.ranger.model.ServiceNode;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import io.appform.dropwizard.discovery.common.ShardInfo;
+import io.durg.tsaheylu.model.NodeData;
 import lombok.val;
 import org.junit.Before;
 import org.junit.Test;
@@ -24,7 +25,7 @@ public class HierarchicalEnvironmentAwareShardSelectorTest {
     private HierarchicalEnvironmentAwareShardSelector hierarchicalEnvironmentAwareShardSelector;
 
     @Mock
-    private MapBasedServiceRegistry<ShardInfo> serviceRegistry;
+    private MapBasedServiceRegistry<NodeData> serviceRegistry;
 
     @Before
     public void setUp() {
@@ -39,19 +40,19 @@ public class HierarchicalEnvironmentAwareShardSelectorTest {
         doReturn(serviceName).when(service).getServiceName();
         doReturn(service).when(serviceRegistry).getService();
 
-        ListMultimap<ShardInfo, ServiceNode<ShardInfo>> serviceNodes = ArrayListMultimap.create();
+        ListMultimap<NodeData, ServiceNode<NodeData>> serviceNodes = ArrayListMultimap.create();
         serviceNodes.put(
-                ShardInfo.builder().environment("x.y").build(),
-                new ServiceNode<>("host1", 8888, new ShardInfo("x.y")));
+                NodeData.builder().environment("x.y").build(),
+                new ServiceNode<>("host1", 8888, new NodeData("x.y")));
 
         serviceNodes.put(
-                ShardInfo.builder().environment("x").build(),
-                new ServiceNode<>("host1", 9999, new ShardInfo("x")));
+                NodeData.builder().environment("x").build(),
+                new ServiceNode<>("host1", 9999, new NodeData("x")));
 
         doReturn(serviceNodes).when(serviceRegistry).nodes();
 
         val nodes = hierarchicalEnvironmentAwareShardSelector.nodes(
-                ShardInfo.builder().environment("z").build(),
+                NodeData.builder().environment("z").build(),
                 serviceRegistry);
         assertEquals(0, nodes.size());
     }
@@ -63,19 +64,19 @@ public class HierarchicalEnvironmentAwareShardSelectorTest {
         doReturn(serviceName).when(service).getServiceName();
         doReturn(service).when(serviceRegistry).getService();
 
-        ListMultimap<ShardInfo, ServiceNode<ShardInfo>> serviceNodes = ArrayListMultimap.create();
+        ListMultimap<NodeData, ServiceNode<NodeData>> serviceNodes = ArrayListMultimap.create();
         serviceNodes.put(
-                ShardInfo.builder().environment("x.y").build(),
-                new ServiceNode<>("host1", 8888, new ShardInfo("x.y")));
+                NodeData.builder().environment("x.y").build(),
+                new ServiceNode<>("host1", 8888, new NodeData("x.y")));
 
         serviceNodes.put(
-                ShardInfo.builder().environment("x").build(),
-                new ServiceNode<>("host2", 9999, new ShardInfo("x")));
+                NodeData.builder().environment("x").build(),
+                new ServiceNode<>("host2", 9999, new NodeData("x")));
 
         doReturn(serviceNodes).when(serviceRegistry).nodes();
 
         val nodes = hierarchicalEnvironmentAwareShardSelector.nodes(
-                ShardInfo.builder().environment("x.y").build(),
+                NodeData.builder().environment("x.y").build(),
                 serviceRegistry);
         assertEquals(1, nodes.size());
         assertEquals("host1", nodes.get(0).getHost());
@@ -89,19 +90,19 @@ public class HierarchicalEnvironmentAwareShardSelectorTest {
         doReturn(serviceName).when(service).getServiceName();
         doReturn(service).when(serviceRegistry).getService();
 
-        ListMultimap<ShardInfo, ServiceNode<ShardInfo>> serviceNodes = ArrayListMultimap.create();
+        ListMultimap<NodeData, ServiceNode<NodeData>> serviceNodes = ArrayListMultimap.create();
         serviceNodes.put(
-                ShardInfo.builder().environment("x.y.z").build(),
-                new ServiceNode<>("host1", 8888, new ShardInfo("x.y")));
+                NodeData.builder().environment("x.y.z").build(),
+                new ServiceNode<>("host1", 8888, new NodeData("x.y")));
 
         serviceNodes.put(
-                ShardInfo.builder().environment("x").build(),
-                new ServiceNode<>("host2", 9999, new ShardInfo("x")));
+                NodeData.builder().environment("x").build(),
+                new ServiceNode<>("host2", 9999, new NodeData("x")));
 
         doReturn(serviceNodes).when(serviceRegistry).nodes();
 
         val nodes = hierarchicalEnvironmentAwareShardSelector.nodes(
-                ShardInfo.builder().environment("x.y").build(),
+                NodeData.builder().environment("x.y").build(),
                 serviceRegistry);
         assertEquals(1, nodes.size());
         assertEquals("host2", nodes.get(0).getHost());
@@ -115,19 +116,19 @@ public class HierarchicalEnvironmentAwareShardSelectorTest {
         doReturn(serviceName).when(service).getServiceName();
         doReturn(service).when(serviceRegistry).getService();
 
-        ListMultimap<ShardInfo, ServiceNode<ShardInfo>> serviceNodes = ArrayListMultimap.create();
+        ListMultimap<NodeData, ServiceNode<NodeData>> serviceNodes = ArrayListMultimap.create();
         serviceNodes.put(
-                ShardInfo.builder().environment("x.y.z").build(),
-                new ServiceNode<>("host1", 8888, new ShardInfo("x.y")));
+                NodeData.builder().environment("x.y.z").build(),
+                new ServiceNode<>("host1", 8888, new NodeData("x.y")));
 
         serviceNodes.put(
-                ShardInfo.builder().environment("x").build(),
-                new ServiceNode<>("host2", 9999, new ShardInfo("x")));
+                NodeData.builder().environment("x").build(),
+                new ServiceNode<>("host2", 9999, new NodeData("x")));
 
         doReturn(serviceNodes).when(serviceRegistry).nodes();
 
         val nodes = hierarchicalEnvironmentAwareShardSelector.nodes(
-                ShardInfo.builder().environment("*").build(),
+                NodeData.builder().environment("*").build(),
                 serviceRegistry);
         assertEquals(2, nodes.size());
     }
