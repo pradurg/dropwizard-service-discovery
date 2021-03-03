@@ -1,9 +1,26 @@
 package io.appform.dropwizard.discovery.client.selector;
 
+import com.flipkart.ranger.finder.Service;
+import com.flipkart.ranger.finder.sharded.MapBasedServiceRegistry;
+import com.flipkart.ranger.model.ServiceNode;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
+import io.appform.dropwizard.discovery.common.ShardInfo;
+import lombok.val;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
+
+import java.util.UUID;
+
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.doReturn;
+
 public class HierarchicalEnvironmentAwareShardSelectorTest {
 
 
-    /*
     private HierarchicalEnvironmentAwareShardSelector hierarchicalEnvironmentAwareShardSelector;
 
     @Mock
@@ -113,6 +130,6 @@ public class HierarchicalEnvironmentAwareShardSelectorTest {
                 ShardInfo.builder().environment("*").build(),
                 serviceRegistry);
         assertEquals(2, nodes.size());
-    }*/
+    }
 
 }
