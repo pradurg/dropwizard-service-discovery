@@ -40,12 +40,14 @@ import io.appform.dropwizard.discovery.bundle.rotationstatus.DropwizardServerSta
 import io.appform.dropwizard.discovery.bundle.rotationstatus.OORTask;
 import io.appform.dropwizard.discovery.bundle.rotationstatus.RotationStatus;
 import io.appform.dropwizard.discovery.client.ServiceDiscoveryClient;
-import io.appform.dropwizard.discovery.common.ShardInfo;
 import io.dropwizard.Configuration;
 import io.dropwizard.ConfiguredBundle;
 import io.dropwizard.lifecycle.Managed;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
+import io.durg.tsaheylu.model.NodeData;
+import io.durg.tsaheylu.registry.HealthMetricManager;
+import io.durg.tsaheylu.registry.metrics.JVMHeapSizeMetricMonitor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -58,6 +60,7 @@ import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 /**
  * A dropwizard bundle for service discovery.
@@ -67,7 +70,7 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
 
     private ServiceDiscoveryConfiguration serviceDiscoveryConfiguration;
     private List<Healthcheck> healthchecks = Lists.newArrayList();
-    private ServiceProvider<ShardInfo> serviceProvider;
+    private ServiceProvider<NodeData> serviceProvider;
     private final List<IdValidationConstraint> globalIdConstraints;
 
     @Getter
@@ -189,16 +192,23 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                 .build();
     }
 
-    private ServiceProvider<ShardInfo> buildServiceProvider(
+    private ServiceProvider<NodeData> buildServiceProvider(
             Environment environment,
             ObjectMapper objectMapper,
             String namespace,
             String serviceName,
             String hostname,
             int port) {
-        val nodeInfo = ShardInfo.builder()
-                .environment(serviceDiscoveryConfiguration.getEnvironment())
-                .build();
+
+        Supplier<NodeData> nodeDataSupplier = () -> {
+            HealthMetricManager healthMetricManager = HealthMetricManager.builder()
+                    .monitor(new JVMHeapSizeMetricMonitor())
+                    .build();
+            return NodeData.builder()
+                    .environment(serviceDiscoveryConfiguration.getEnvironment())
+                    .healthMetric(healthMetricManager.getMetricValue())
+                    .build();
+        };
         val initialDelayForMonitor = serviceDiscoveryConfiguration.getInitialDelaySeconds() > 1
                 ? serviceDiscoveryConfiguration.getInitialDelaySeconds() - 1
                 : 0;
@@ -208,22 +218,21 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
         val dwMonitoringStaleness = serviceDiscoveryConfiguration.getDropwizardCheckStaleness() < dwMonitoringInterval + 1
                 ? dwMonitoringInterval + 1
                 : serviceDiscoveryConfiguration.getDropwizardCheckStaleness();
-        val serviceProviderBuilder = ServiceProviderBuilders.<ShardInfo>shardedServiceProviderBuilder()
+        val serviceProviderBuilder = ServiceProviderBuilders.<NodeData>shardedServiceProviderBuilder()
                 .withCuratorFramework(curator)
                 .withNamespace(namespace)
                 .withServiceName(serviceName)
                 .withSerializer(data -> {
                     try {
                         return objectMapper.writeValueAsBytes(data);
-                    }
-                    catch (Exception e) {
+                    } catch (Exception e) {
                         log.warn("Could not parse node data", e);
                     }
                     return null;
                 })
                 .withHostname(hostname)
                 .withPort(port)
-                .withNodeData(nodeInfo)
+                .withNodeDataSupplier(nodeDataSupplier)
                 .withHealthcheck(new InternalHealthChecker(healthchecks))
                 .withHealthcheck(new RotationCheck(rotationStatus))
                 .withHealthcheck(new InitialDelayChecker(serviceDiscoveryConfiguration.getInitialDelaySeconds()))
