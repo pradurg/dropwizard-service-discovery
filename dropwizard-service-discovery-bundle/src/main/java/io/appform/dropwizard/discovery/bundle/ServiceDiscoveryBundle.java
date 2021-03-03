@@ -46,6 +46,8 @@ import io.dropwizard.lifecycle.Managed;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import io.durg.tsaheylu.model.NodeData;
+import io.durg.tsaheylu.registry.HealthMetricManager;
+import io.durg.tsaheylu.registry.metrics.JVMHeapSizeMetricMonitor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -58,6 +60,7 @@ import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 /**
  * A dropwizard bundle for service discovery.
@@ -196,9 +199,16 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
             String serviceName,
             String hostname,
             int port) {
-        val nodeInfo = NodeData.builder()
-                .environment(serviceDiscoveryConfiguration.getEnvironment())
-                .build();
+
+        Supplier<NodeData> nodeDataSupplier = () -> {
+            HealthMetricManager healthMetricManager = HealthMetricManager.builder()
+                    .monitor(new JVMHeapSizeMetricMonitor())
+                    .build();
+            return NodeData.builder()
+                    .environment(serviceDiscoveryConfiguration.getEnvironment())
+                    .healthMetric(healthMetricManager.getMetricValue())
+                    .build();
+        };
         val initialDelayForMonitor = serviceDiscoveryConfiguration.getInitialDelaySeconds() > 1
                 ? serviceDiscoveryConfiguration.getInitialDelaySeconds() - 1
                 : 0;
@@ -215,15 +225,14 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                 .withSerializer(data -> {
                     try {
                         return objectMapper.writeValueAsBytes(data);
-                    }
-                    catch (Exception e) {
+                    } catch (Exception e) {
                         log.warn("Could not parse node data", e);
                     }
                     return null;
                 })
                 .withHostname(hostname)
                 .withPort(port)
-                .withNodeData(nodeInfo)
+                .withNodeDataSupplier(nodeDataSupplier)
                 .withHealthcheck(new InternalHealthChecker(healthchecks))
                 .withHealthcheck(new RotationCheck(rotationStatus))
                 .withHealthcheck(new InitialDelayChecker(serviceDiscoveryConfiguration.getInitialDelaySeconds()))
