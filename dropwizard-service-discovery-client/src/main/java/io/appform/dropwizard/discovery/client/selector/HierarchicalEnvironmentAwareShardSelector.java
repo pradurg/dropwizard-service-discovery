@@ -5,7 +5,6 @@ import com.flipkart.ranger.model.ServiceNode;
 import com.flipkart.ranger.model.ShardSelector;
 import com.google.common.collect.ListMultimap;
 import io.appform.dropwizard.discovery.client.Constants;
-import io.appform.dropwizard.discovery.common.ShardInfo;
 import io.durg.tsaheylu.model.NodeData;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;

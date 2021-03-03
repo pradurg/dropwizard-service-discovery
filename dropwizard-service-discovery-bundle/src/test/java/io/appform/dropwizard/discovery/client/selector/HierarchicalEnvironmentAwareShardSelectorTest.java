@@ -5,7 +5,6 @@ import com.flipkart.ranger.finder.sharded.MapBasedServiceRegistry;
 import com.flipkart.ranger.model.ServiceNode;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
-import io.appform.dropwizard.discovery.common.ShardInfo;
 import io.durg.tsaheylu.model.NodeData;
 import lombok.val;
 import org.junit.Before;

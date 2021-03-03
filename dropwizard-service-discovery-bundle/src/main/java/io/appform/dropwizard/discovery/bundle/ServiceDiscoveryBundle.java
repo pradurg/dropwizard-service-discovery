@@ -40,12 +40,12 @@ import io.appform.dropwizard.discovery.bundle.rotationstatus.DropwizardServerSta
 import io.appform.dropwizard.discovery.bundle.rotationstatus.OORTask;
 import io.appform.dropwizard.discovery.bundle.rotationstatus.RotationStatus;
 import io.appform.dropwizard.discovery.client.ServiceDiscoveryClient;
-import io.appform.dropwizard.discovery.common.ShardInfo;
 import io.dropwizard.Configuration;
 import io.dropwizard.ConfiguredBundle;
 import io.dropwizard.lifecycle.Managed;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
+import io.durg.tsaheylu.model.NodeData;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -67,7 +67,7 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
 
     private ServiceDiscoveryConfiguration serviceDiscoveryConfiguration;
     private List<Healthcheck> healthchecks = Lists.newArrayList();
-    private ServiceProvider<ShardInfo> serviceProvider;
+    private ServiceProvider<NodeData> serviceProvider;
     private final List<IdValidationConstraint> globalIdConstraints;
 
     @Getter
@@ -189,14 +189,14 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                 .build();
     }
 
-    private ServiceProvider<ShardInfo> buildServiceProvider(
+    private ServiceProvider<NodeData> buildServiceProvider(
             Environment environment,
             ObjectMapper objectMapper,
             String namespace,
             String serviceName,
             String hostname,
             int port) {
-        val nodeInfo = ShardInfo.builder()
+        val nodeInfo = NodeData.builder()
                 .environment(serviceDiscoveryConfiguration.getEnvironment())
                 .build();
         val initialDelayForMonitor = serviceDiscoveryConfiguration.getInitialDelaySeconds() > 1
@@ -208,7 +208,7 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
         val dwMonitoringStaleness = serviceDiscoveryConfiguration.getDropwizardCheckStaleness() < dwMonitoringInterval + 1
                 ? dwMonitoringInterval + 1
                 : serviceDiscoveryConfiguration.getDropwizardCheckStaleness();
-        val serviceProviderBuilder = ServiceProviderBuilders.<ShardInfo>shardedServiceProviderBuilder()
+        val serviceProviderBuilder = ServiceProviderBuilders.<NodeData>shardedServiceProviderBuilder()
                 .withCuratorFramework(curator)
                 .withNamespace(namespace)
                 .withServiceName(serviceName)

@@ -24,7 +24,6 @@ import com.flipkart.ranger.finder.sharded.SimpleShardedServiceFinder;
 import com.flipkart.ranger.model.ServiceNode;
 import io.appform.dropwizard.discovery.client.selector.HierarchicalEnvironmentAwareShardSelector;
 import io.appform.dropwizard.discovery.client.selector.RandomWeightedNodeSelector;
-import io.appform.dropwizard.discovery.common.ShardInfo;
 import io.durg.tsaheylu.model.NodeData;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
@@ -89,7 +88,7 @@ public class ServiceDiscoveryClient {
                 .withDeserializer(data -> {
                     try {
                         return objectMapper.readValue(data,
-                                new TypeReference<ServiceNode<ShardInfo>>() {
+                                new TypeReference<ServiceNode<NodeData>>() {
                                 });
                     }
                     catch (Exception e) {
