@@ -20,11 +20,15 @@ package io.appform.dropwizard.discovery.client;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flipkart.ranger.ServiceFinderBuilders;
+import com.flipkart.ranger.finder.BaseServiceFinderBuilder;
+import com.flipkart.ranger.finder.sharded.MapBasedServiceRegistry;
 import com.flipkart.ranger.finder.sharded.SimpleShardedServiceFinder;
 import com.flipkart.ranger.model.ServiceNode;
 import io.appform.dropwizard.discovery.client.selector.HierarchicalEnvironmentAwareShardSelector;
 import io.appform.dropwizard.discovery.client.selector.RandomWeightedNodeSelector;
+import io.appform.dropwizard.discovery.client.selector.TsaheyluHealthSelector;
 import io.appform.dropwizard.discovery.common.ShardInfo;
+import io.durg.tsaheylu.metered.ErrorRegistry;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
@@ -32,6 +36,7 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryForever;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -50,6 +55,7 @@ public class ServiceDiscoveryClient {
             ObjectMapper objectMapper,
             String connectionString,
             int refreshTimeMs,
+            ErrorRegistry errorRegistry,
             boolean disableWatchers) {
         this(namespace,
                 serviceName,
@@ -57,6 +63,7 @@ public class ServiceDiscoveryClient {
                 objectMapper,
                 CuratorFrameworkFactory.newClient(connectionString, new RetryForever(5000)),
                 refreshTimeMs,
+                errorRegistry,
                 disableWatchers);
     }
 
@@ -68,6 +75,7 @@ public class ServiceDiscoveryClient {
             ObjectMapper objectMapper,
             CuratorFramework curator,
             int refreshTimeMs,
+            ErrorRegistry errorRegistry,
             boolean disableWatchers) {
 
         int effectiveRefreshTimeMs = refreshTimeMs;
@@ -81,7 +89,7 @@ public class ServiceDiscoveryClient {
         this.criteria = ShardInfo.builder()
                 .environment(environment)
                 .build();
-        this.serviceFinder = ServiceFinderBuilders.<ShardInfo>shardedFinderBuilder()
+        BaseServiceFinderBuilder<ShardInfo, MapBasedServiceRegistry<ShardInfo>, SimpleShardedServiceFinder<ShardInfo>> builder = ServiceFinderBuilders.<ShardInfo>shardedFinderBuilder()
                 .withCuratorFramework(curator)
                 .withNamespace(namespace)
                 .withServiceName(serviceName)
@@ -97,9 +105,9 @@ public class ServiceDiscoveryClient {
                 })
                 .withNodeRefreshIntervalMs(effectiveRefreshTimeMs)
                 .withDisableWatchers(disableWatchers)
-                .withShardSelector(new HierarchicalEnvironmentAwareShardSelector())
-                .withNodeSelector(new RandomWeightedNodeSelector())
-                .build();
+                .withNodeSelector(new TsaheyluHealthSelector(errorRegistry))
+                .withShardSelector(new HierarchicalEnvironmentAwareShardSelector());
+        this.serviceFinder = builder.build();
     }
 
     public void start() throws Exception {

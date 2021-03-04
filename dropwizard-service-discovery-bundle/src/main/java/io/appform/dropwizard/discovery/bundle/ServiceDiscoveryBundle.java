@@ -46,6 +46,7 @@ import io.dropwizard.ConfiguredBundle;
 import io.dropwizard.lifecycle.Managed;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
+import io.durg.tsaheylu.metered.ErrorRegistry;
 import io.durg.tsaheylu.registry.HealthMetricManager;
 import io.durg.tsaheylu.registry.metrics.JVMHeapSizeMetricMonitor;
 import lombok.Getter;
@@ -129,7 +130,7 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
         serviceDiscoveryClient = buildDiscoveryClient(
                 environment,
                 namespace,
-                serviceName);
+                serviceName, null);
 
         environment.lifecycle()
                 .manage(new ServiceDiscoveryManager(serviceName));
@@ -180,7 +181,8 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
     private ServiceDiscoveryClient buildDiscoveryClient(
             Environment environment,
             String namespace,
-            String serviceName) {
+            String serviceName,
+            ErrorRegistry errorRegistry) {
         return ServiceDiscoveryClient.fromCurator()
                 .curator(curator)
                 .namespace(namespace)
@@ -189,6 +191,7 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                 .objectMapper(environment.getObjectMapper())
                 .refreshTimeMs(serviceDiscoveryConfiguration.getRefreshTimeMs())
                 .disableWatchers(serviceDiscoveryConfiguration.isDisableWatchers())
+                .errorRegistry(errorRegistry)
                 .build();
     }
 
