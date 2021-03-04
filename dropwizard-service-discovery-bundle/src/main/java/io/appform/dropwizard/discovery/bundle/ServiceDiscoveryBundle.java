@@ -17,6 +17,7 @@
 
 package io.appform.dropwizard.discovery.bundle;
 
+import com.codahale.metrics.Gauge;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flipkart.ranger.ServiceProviderBuilders;
 import com.flipkart.ranger.healthcheck.Healthcheck;
@@ -49,6 +50,7 @@ import io.dropwizard.setup.Environment;
 import io.durg.tsaheylu.metered.ErrorRegistry;
 import io.durg.tsaheylu.registry.HealthMetricManager;
 import io.durg.tsaheylu.registry.metrics.JVMHeapSizeMetricMonitor;
+import io.durg.tsaheylu.registry.metrics.MetricMonitor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -217,7 +219,20 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                 : serviceDiscoveryConfiguration.getDropwizardCheckStaleness();
         Supplier<Double> healthMetricSupplier = () -> {
             HealthMetricManager healthMetricManager = HealthMetricManager.builder()
-                    .monitor(new JVMHeapSizeMetricMonitor())
+                    .monitor(new JVMHeapSizeMetricMonitor()).monitor(new MetricMonitor() {
+                        @Override
+                        public double getWeight() {
+                            return -1;
+                        }
+
+                        @Override
+                        public Double getMetric() {
+                            Gauge<Double> gauge = environment.metrics().getGauges().get("org.eclipse.jetty.util.thread.QueuedThreadPool.dw.utilization-max");
+                            Double gaugeValue = gauge.getValue();
+                            log.info("dw.utilization-max={}", gaugeValue);
+                            return gaugeValue;
+                        }
+                    })
                     .build();
             return healthMetricManager.getMetricValue();
         };
