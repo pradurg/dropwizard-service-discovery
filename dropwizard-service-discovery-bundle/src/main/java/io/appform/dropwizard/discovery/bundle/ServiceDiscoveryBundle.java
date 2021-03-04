@@ -40,12 +40,12 @@ import io.appform.dropwizard.discovery.bundle.rotationstatus.DropwizardServerSta
 import io.appform.dropwizard.discovery.bundle.rotationstatus.OORTask;
 import io.appform.dropwizard.discovery.bundle.rotationstatus.RotationStatus;
 import io.appform.dropwizard.discovery.client.ServiceDiscoveryClient;
+import io.appform.dropwizard.discovery.common.ShardInfo;
 import io.dropwizard.Configuration;
 import io.dropwizard.ConfiguredBundle;
 import io.dropwizard.lifecycle.Managed;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
-import io.durg.tsaheylu.model.NodeData;
 import io.durg.tsaheylu.registry.HealthMetricManager;
 import io.durg.tsaheylu.registry.metrics.JVMHeapSizeMetricMonitor;
 import lombok.Getter;
@@ -70,7 +70,7 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
 
     private ServiceDiscoveryConfiguration serviceDiscoveryConfiguration;
     private List<Healthcheck> healthchecks = Lists.newArrayList();
-    private ServiceProvider<NodeData> serviceProvider;
+    private ServiceProvider<ShardInfo> serviceProvider;
     private final List<IdValidationConstraint> globalIdConstraints;
 
     @Getter
@@ -192,7 +192,7 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                 .build();
     }
 
-    private ServiceProvider<NodeData> buildServiceProvider(
+    private ServiceProvider<ShardInfo> buildServiceProvider(
             Environment environment,
             ObjectMapper objectMapper,
             String namespace,
@@ -200,15 +200,9 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
             String hostname,
             int port) {
 
-        Supplier<NodeData> nodeDataSupplier = () -> {
-            HealthMetricManager healthMetricManager = HealthMetricManager.builder()
-                    .monitor(new JVMHeapSizeMetricMonitor())
-                    .build();
-            return NodeData.builder()
-                    .environment(serviceDiscoveryConfiguration.getEnvironment())
-                    .healthMetric(healthMetricManager.getMetricValue())
-                    .build();
-        };
+        ShardInfo nodeData = ShardInfo.builder()
+                .environment(serviceDiscoveryConfiguration.getEnvironment())
+                .build();
         val initialDelayForMonitor = serviceDiscoveryConfiguration.getInitialDelaySeconds() > 1
                 ? serviceDiscoveryConfiguration.getInitialDelaySeconds() - 1
                 : 0;
@@ -218,7 +212,13 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
         val dwMonitoringStaleness = serviceDiscoveryConfiguration.getDropwizardCheckStaleness() < dwMonitoringInterval + 1
                 ? dwMonitoringInterval + 1
                 : serviceDiscoveryConfiguration.getDropwizardCheckStaleness();
-        val serviceProviderBuilder = ServiceProviderBuilders.<NodeData>shardedServiceProviderBuilder()
+        Supplier<Double> healthMetricSupplier = () -> {
+            HealthMetricManager healthMetricManager = HealthMetricManager.builder()
+                    .monitor(new JVMHeapSizeMetricMonitor())
+                    .build();
+            return healthMetricManager.getMetricValue();
+        };
+        val serviceProviderBuilder = ServiceProviderBuilders.<ShardInfo>shardedServiceProviderBuilder()
                 .withCuratorFramework(curator)
                 .withNamespace(namespace)
                 .withServiceName(serviceName)
@@ -232,7 +232,8 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                 })
                 .withHostname(hostname)
                 .withPort(port)
-                .withNodeDataSupplier(nodeDataSupplier)
+                .withNodeData(nodeData)
+                .withHealthMetricSupplier(healthMetricSupplier)
                 .withHealthcheck(new InternalHealthChecker(healthchecks))
                 .withHealthcheck(new RotationCheck(rotationStatus))
                 .withHealthcheck(new InitialDelayChecker(serviceDiscoveryConfiguration.getInitialDelaySeconds()))

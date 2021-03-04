@@ -24,7 +24,7 @@ import com.flipkart.ranger.finder.sharded.SimpleShardedServiceFinder;
 import com.flipkart.ranger.model.ServiceNode;
 import io.appform.dropwizard.discovery.client.selector.HierarchicalEnvironmentAwareShardSelector;
 import io.appform.dropwizard.discovery.client.selector.RandomWeightedNodeSelector;
-import io.durg.tsaheylu.model.NodeData;
+import io.appform.dropwizard.discovery.common.ShardInfo;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
@@ -39,8 +39,8 @@ import java.util.Optional;
  */
 @Slf4j
 public class ServiceDiscoveryClient {
-    private final NodeData criteria;
-    private SimpleShardedServiceFinder<NodeData> serviceFinder;
+    private final ShardInfo criteria;
+    private SimpleShardedServiceFinder<ShardInfo> serviceFinder;
 
     @Builder(builderMethodName = "fromConnectionString", builderClassName = "FromConnectionStringBuilder")
     private ServiceDiscoveryClient(
@@ -78,20 +78,19 @@ public class ServiceDiscoveryClient {
                     Constants.MINIMUM_REFRESH_TIME);
         }
 
-        this.criteria = NodeData.builder()
+        this.criteria = ShardInfo.builder()
                 .environment(environment)
                 .build();
-        this.serviceFinder = ServiceFinderBuilders.<NodeData>shardedFinderBuilder()
+        this.serviceFinder = ServiceFinderBuilders.<ShardInfo>shardedFinderBuilder()
                 .withCuratorFramework(curator)
                 .withNamespace(namespace)
                 .withServiceName(serviceName)
                 .withDeserializer(data -> {
                     try {
                         return objectMapper.readValue(data,
-                                new TypeReference<ServiceNode<NodeData>>() {
+                                new TypeReference<ServiceNode<ShardInfo>>() {
                                 });
-                    }
-                    catch (Exception e) {
+                    } catch (Exception e) {
                         log.warn("Could not parse node data", e);
                     }
                     return null;
@@ -111,19 +110,19 @@ public class ServiceDiscoveryClient {
         serviceFinder.stop();
     }
 
-    public Optional<ServiceNode<NodeData>> getNode() {
+    public Optional<ServiceNode<ShardInfo>> getNode() {
         return getNode(criteria);
     }
 
-    public List<ServiceNode<NodeData>> getAllNodes() {
+    public List<ServiceNode<ShardInfo>> getAllNodes() {
         return getAllNodes(criteria);
     }
 
-    public Optional<ServiceNode<NodeData>> getNode(final NodeData shardInfo) {
-            return Optional.ofNullable(serviceFinder.get(shardInfo));
+    public Optional<ServiceNode<ShardInfo>> getNode(final ShardInfo shardInfo) {
+        return Optional.ofNullable(serviceFinder.get(shardInfo));
     }
 
-    public List<ServiceNode<NodeData>> getAllNodes(final NodeData shardInfo) {
+    public List<ServiceNode<ShardInfo>> getAllNodes(final ShardInfo shardInfo) {
         return serviceFinder.getAll(shardInfo);
     }
 
